@@ -1,0 +1,101 @@
+import 'package:flutter/material.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: RecordingScreen(),
+    );
+  }
+}
+
+class RecordingScreen extends StatefulWidget {
+  @override
+  _RecordingScreenState createState() => _RecordingScreenState();
+}
+
+class _RecordingScreenState extends State<RecordingScreen> {
+  TextEditingController _textEditingController = TextEditingController();
+  stt.SpeechToText _speech = stt.SpeechToText();
+  bool _isRecording = false;
+  String _recordedText = '';
+
+  void _toggleRecording() async {
+    setState(() {
+      _isRecording = !_isRecording;
+      if (!_isRecording) {
+        _stopRecording();
+      } else {
+        _startRecording();
+      }
+    });
+  }
+
+  void _startRecording() async {
+    bool available = await _speech.initialize();
+    if (available) {
+      _speech.listen(
+        onResult: (result) {
+          setState(() {
+            _recordedText = result.recognizedWords;
+          });
+        },
+      );
+    }
+  }
+
+  void _stopRecording() {
+    _speech.stop();
+    _textEditingController.text += _recordedText + ' ';
+    _recordedText = '';
+  }
+
+  @override
+  void dispose() {
+    _textEditingController.dispose();
+    _speech.cancel(); // Cancel the speech recognition when disposing
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Recording Example'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            TextFormField(
+              controller: _textEditingController,
+              maxLines: 3,
+              decoration: InputDecoration(labelText: 'Recorded Text'),
+            ),
+            SizedBox(height: 20),
+            _isRecording
+                ? CircularProgressIndicator() // Display progress indicator while recording
+                : Container(), // Empty container when not recording
+            SizedBox(height: 20),
+            _recordedText.isNotEmpty
+                ? Container(
+                    padding: EdgeInsets.all(16),
+                    color: Colors.grey[200],
+                    child: Text(_recordedText),
+                  )
+                : Container(), // Display recorded text below the button
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _toggleRecording,
+        child: Icon(_isRecording ? Icons.stop : Icons.mic),
+      ),
+    );
+  }
+}
